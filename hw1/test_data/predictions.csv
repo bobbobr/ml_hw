@@ -1,1 +1,4 @@
-{"detail":"Error processing file: \"['fuel'] not in index\""}
+name,year,km_driven,fuel,seller_type,transmission,owner,mileage,engine,max_power,seats,predicted_price
+Maruti Swift Dzire,2015,50000,Petrol,Individual,Manual,First Owner,23.4,1248.0,74.0,5,420736.02968956775
+Maruti Swift Dzire,2018,30000,Diesel,Individual,Manual,First Owner,21.3,1396.0,90.0,5,730522.5811321657
+Maruti Swift Dzire,2017,40000,Petrol,Individual,Manual,First Owner,18.0,1498.0,117.0,5,821475.0213224891

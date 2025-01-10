@@ -15,6 +15,9 @@ with open("../models/best_ridge_model.pkl", "rb") as file:
 
 with open("../models/scaler.pkl", "rb") as file:
     scaler = pickle.load(file)
+with open("../models/encoder.pkl", "rb") as file:
+    encoder = pickle.load(file)
+
 
 app = FastAPI()
 
@@ -30,7 +33,7 @@ class Item(BaseModel):
     mileage: str
     engine: str
     max_power: str
-    seats: float
+    seats: int
 
 
 class Items(BaseModel):
@@ -40,24 +43,36 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df['mileage'] = df['mileage'].str.replace(' kmpl', '').str.replace(' km/kg', '').astype(float)
     df['engine'] = df['engine'].str.replace(' CC', '').astype(float)
     df['max_power'] = df['max_power'].str.replace(' bhp', '').astype(float)
-    
     if 'name' in df.columns:
-        df['brand'] = df['name'].str.split(' ', n=1).str[0]
+        #df['brand'] = df['name'].str.split(' ', n=1).str[0]
         df = df.drop(columns=['name'], errors='ignore')
 
     
-    categorical_columns = ['fuel', 'seller_type', 'transmission', 'owner', 'brand']
-    df = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
+    categorical_columns = ['seats','fuel', 'seller_type', 'transmission', 'owner']
+    #df = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
+
+    categorical_data = df[categorical_columns]
+
+    print(categorical_data)
+
+    encoded_categorical_data = encoder.transform(categorical_data)
+    encoded_columns = encoder.get_feature_names_out(categorical_columns)
+    encoded_df = pd.DataFrame(encoded_categorical_data, columns=encoded_columns, index=df.index)
+    
+    df = pd.concat([df.drop(columns=categorical_columns), encoded_df], axis=1)
     
     df = df.fillna(0)
 
-    return df
+    print(df)
 
+    return df
+    
 
 @app.post("/predict_item")
 def predict_item(item: Item) -> float:
     df = pd.DataFrame([item.model_dump()])
     df = preprocess_data(df)
+    print(df)
     scaled_data = scaler.transform(df)
 
     prediction = model.predict(scaled_data)
@@ -73,7 +88,9 @@ def predict_items(file: UploadFile) -> StreamingResponse:
 
         content = file.file.read().decode("utf-8")
         data = pd.read_csv(io.StringIO(content))
+        print(data)
         processed_data = preprocess_data(data)
+        print(processed_data)
 
         scaled_data = scaler.transform(processed_data)
         print(scaled_data)
