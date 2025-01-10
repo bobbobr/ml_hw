@@ -7,7 +7,14 @@ import numpy as np
 from fastapi.responses import StreamingResponse
 import csv
 import io
-model = pickle.load("../models/best_ridge_model.pkl")
+
+
+
+with open("../models/best_ridge_model.pkl", "rb") as file:
+    model = pickle.load(file)
+
+with open("../models/scaler.pkl", "rb") as file:
+    scaler = pickle.load(file)
 
 app = FastAPI()
 
@@ -15,7 +22,6 @@ app = FastAPI()
 class Item(BaseModel):
     name: str
     year: int
-    selling_price: int
     km_driven: int
     fuel: str
     seller_type: str
@@ -24,18 +30,37 @@ class Item(BaseModel):
     mileage: str
     engine: str
     max_power: str
-    torque: str
     seats: float
 
 
 class Items(BaseModel):
     objects: List[Item]
 
+def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+    df['mileage'] = df['mileage'].str.replace(' kmpl', '').str.replace(' km/kg', '').astype(float)
+    df['engine'] = df['engine'].str.replace(' CC', '').astype(float)
+    df['max_power'] = df['max_power'].str.replace(' bhp', '').astype(float)
+    
+    if 'name' in df.columns:
+        df['brand'] = df['name'].str.split(' ', n=1).str[0]
+        df = df.drop(columns=['name'], errors='ignore')
+
+    
+    categorical_columns = ['fuel', 'seller_type', 'transmission', 'owner', 'brand']
+    df = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
+    
+    df = df.fillna(0)
+
+    return df
+
 
 @app.post("/predict_item")
 def predict_item(item: Item) -> float:
-    df = pd.DataFrame([item.dict()])
-    prediction = model.predict(df)
+    df = pd.DataFrame([item.model_dump()])
+    df = preprocess_data(df)
+    scaled_data = scaler.transform(df)
+
+    prediction = model.predict(scaled_data)
 
     return prediction[0]
 
@@ -43,25 +68,22 @@ def predict_item(item: Item) -> float:
 @app.post("/predict_items")
 def predict_items(file: UploadFile) -> StreamingResponse:
     try:
-        # Проверка формата файла
         if not file.filename.endswith(".csv"):
             raise HTTPException(status_code=400, detail="Uploaded file is not a CSV.")
 
-        # Чтение загруженного файла
         content = file.file.read().decode("utf-8")
         data = pd.read_csv(io.StringIO(content))
+        processed_data = preprocess_data(data)
 
-
-        # Предсказания
-        predictions = model.predict(data)
+        scaled_data = scaler.transform(processed_data)
+        print(scaled_data)
+        predictions = model.predict(scaled_data)
         data["predicted_price"] = predictions
 
-        # Создание CSV с предсказаниями
         output = io.StringIO()
         data.to_csv(output, index=False)
         output.seek(0)
 
-        # Возврат CSV в виде файла
         response = StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv"

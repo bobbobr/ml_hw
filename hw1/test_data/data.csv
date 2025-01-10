@@ -1,0 +1,4 @@
+name,year,km_driven,fuel,seller_type,transmission,owner,mileage,engine,max_power,seats
+Maruti Swift Dzire,2015,50000,Petrol,Individual,Manual,First Owner,23.4 kmpl,1248 CC,74 bhp,5
+Maruti Swift Dzire,2018,30000,Diesel,Individual,Manual,First Owner,21.3 kmpl,1396 CC,90 bhp,5
+Maruti Swift Dzire,2017,40000,Petrol,Individual,Manual,First Owner,18.0 kmpl,1498 CC,117 bhp,5

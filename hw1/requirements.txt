@@ -2,3 +2,6 @@ fastapi
 numpy
 pandas
 pydantic
+uvicorn
+scikit-learn
+python-multipart
